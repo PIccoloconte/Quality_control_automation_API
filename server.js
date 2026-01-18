@@ -1,9 +1,18 @@
 const express = require("express");
 const fs = require("fs");
 const XLSX = require("xlsx");
+const cors = require("cors");
 
 const app = express();
+app.use(cors());
 app.use(express.json());
+
+// Funzione per normalizzare i path (accetta /, \ e \\)
+function normalizePath(inputPath) {
+  if (!inputPath) return inputPath;
+  // Converte forward slash in backslash e normalizza il path
+  return require("path").normalize(inputPath.replace(/\//g, "\\"));
+}
 
 // Configurazione percorsi (modificabili via API)
 let config = {
@@ -19,23 +28,25 @@ app.post("/api/config", (req, res) => {
   const { sourcePath, destPath } = req.body;
 
   if (sourcePath) {
-    if (!fs.existsSync(sourcePath)) {
+    const normalizedSource = normalizePath(sourcePath);
+    if (!fs.existsSync(normalizedSource)) {
       return res.status(404).json({
         error: "File sorgente non trovato",
-        path: sourcePath,
+        path: normalizedSource,
       });
     }
-    config.sourcePath = sourcePath;
+    config.sourcePath = normalizedSource;
   }
 
   if (destPath) {
-    if (!fs.existsSync(destPath)) {
+    const normalizedDest = normalizePath(destPath);
+    if (!fs.existsSync(normalizedDest)) {
       return res.status(404).json({
         error: "File destinazione non trovato",
-        path: destPath,
+        path: normalizedDest,
       });
     }
-    config.destPath = destPath;
+    config.destPath = normalizedDest;
   }
 
   res.json({
@@ -64,20 +75,20 @@ app.get("/api/read-source", async (req, res) => {
 
     // Filtraggio per disegno
     filtered = filtered.filter(
-      (row) => String(row.disegno) === String(disegno)
+      (row) => String(row.disegno) === String(disegno),
     );
 
     // Filtraggio per commessa
     if (filtered.length > 1 && commessa) {
       filtered = filtered.filter(
-        (row) => String(row.commessa) === String(commessa)
+        (row) => String(row.commessa) === String(commessa),
       );
     }
 
     // Filtraggio per quantità
     if (filtered.length > 1 && quantita) {
       filtered = filtered.filter(
-        (row) => String(row.quantita) === String(quantita)
+        (row) => String(row.quantita) === String(quantita),
       );
     }
     //Nessun dato trovato
@@ -151,14 +162,14 @@ app.post("/api/write-destination", async (req, res) => {
     const destWorkbook = XLSX.readFile(config.destPath);
     const destSheetName = destWorkbook.SheetNames[0];
     const existingData = XLSX.utils.sheet_to_json(
-      destWorkbook.Sheets[destSheetName]
+      destWorkbook.Sheets[destSheetName],
     );
 
     // Calcola il prossimo Nr_controllo
     let nextNrControllo = 1;
     if (existingData.length > 0) {
       const lastNr = Math.max(
-        ...existingData.map((row) => parseInt(row.nr_controllo) || 0)
+        ...existingData.map((row) => parseInt(row.nr_controllo) || 0),
       );
       nextNrControllo = lastNr + 1;
     }
@@ -205,6 +216,15 @@ const PORT = 3000;
 app.listen(PORT, () => {
   console.log(`Server in esecuzione sulla porta ${PORT}`);
 });
+
+/*
+checkNumber
+projectAcronym
+ttDrawing
+ttOrder
+quantity
+checklistData
+*/
 
 // // Verifica esistenza file sorgente
 // console.log("=== VERIFICA FILE ===");
