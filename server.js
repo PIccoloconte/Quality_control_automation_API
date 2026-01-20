@@ -213,7 +213,7 @@ app.post("/api/write-destination", async (req, res) => {
 //poi collegare questa api a quella di get
 
 const PORT = 3000;
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server in esecuzione sulla porta ${PORT}`);
 });
 
